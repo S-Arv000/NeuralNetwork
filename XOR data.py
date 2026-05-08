@@ -39,16 +39,15 @@ nn.forward(X)
 
 nn.train(X, y, epochs = 10000)
 
-print("Probablities:")
-print(nn.predict_prob(X))
+print("Probablities:", nn.predict_prob(X))
 
-print("Predicted labels:")
-print(nn.prob_to_labels(X))
+print("Predicted labels:", nn.prob_to_labels(X))
 
-print("Actual Data:")
-print(y)
+print("Actual Data:", y)
 
 print("Accuracy:", nn.accuracy(X,y))
+
+print("Gradient Check:", nn.gradient_check(X, y))
 
 print("Loss Plot:")
 plt.plot(

@@ -1,3 +1,4 @@
+from networkx import difference
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -99,6 +100,29 @@ class NeuralNetwork:
         Loss = -np.mean((y_true * np.log(y_predicted)) + (1 - y_true) * np.log(1 - y_predicted))
         
         return Loss
+
+    # Gradient check
+    def gradient_check(self, X, y_true, epsilon = 1e-5):
+
+        self.forward(X)
+        dW2, db2, dW1, db1 = self.backward(X, y_true)
+
+        # Check wegith W1
+        original_value = self.W1[0, 0]
+
+        self.W1[0, 0] = original_value + epsilon
+        positive_loss = self.compute_loss(y_true, self.forward(X))
+
+        self.W1[0,0] = original_value - epsilon
+        negative_loss = self.compute_loss(y_true, self.forward(X))
+
+        self.W1[0, 0] = original_value
+
+        numerical_gradient = (positive_loss - negative_loss) / (2* epsilon)
+        backdrop_gradient = dW1[0, 0]
+        difference = (numerical_gradient - backdrop_gradient)
+
+        return abs(difference)
 
     # Training loop
     def train(self, X, y_true, epochs = 10000, track_value = 1000):
