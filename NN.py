@@ -3,42 +3,54 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class NeuralNetwork:
-    def __init__(self, input_size, hidden_size, output_size, learning_rate = 0.1, seed = 50):
-        """
-        (# input features, # hidden neursons, # output neurons)
+    def __init__(self, layer_dims, activations, learning_rate = 0.1, seed = 50):
+        """        
+    
+        Layer_dims = [input_size, Hidden_size1, hidden_size2,...., output_size]
+
+        activations = [hidden1_activation, hiddne2_activation....]
+        example: activations = ["relu", "sigmoid", "tanh"]
+                    ^ no other activations yet
         
+        len(activations) = len(layer_dims) - 1 
+
+        use cache for backprob.          
         """
+    
+        self.layer_dimensions = layer_dims
+        self.activations = activations
+        self.learning_rate = learning_rate
+        
+        self.weights = []
+        self.biases = []
+        
+        self.loss_values = []
+
         rng = np.random.default_rng(seed)
+
+        for i in range(len(layer_dims) - 1):
+            input_size = layer_dims[i]
+            output_size = layer_dims[i + 1]
+
+            activation = activations[i]
 
         # Weight of inpurt to hidden
         # input_size inputs to hidden_size neurons
-        # W1 = input_size x hidden_size
-        self.W1 = rng.normal(
-            loc = 0,
-            scale = 2/np.sqrt(input_size), 
-            size = (input_size, hidden_size)
-            )
-        
-        # bias 1 
-        # b1 ia 1 x hidden_size
-        self.b1 = np.zeros((1, hidden_size))
+            W = rng.normal(
+                loc = 0,
+                scale = 2/np.sqrt(input_size), 
+                size = (input_size, output_size)
+                )
+            
+            self.weights.append(W)
 
-        # Weight of hidden to output
-        # hidden_size hiddern neurons to output_size neurons
-        # W2 = hidden_size x output_size
-        self.W2 = rng.normal( 
-            loc = 0,
-            scale = 2/np.sqrt(hidden_size),
-            size = (hidden_size, output_size)
-             )
-        
-        # bias 2 
-        # b2 is 1 x output_size
-        self.b2 = np.zeros((1, output_size))
+            # bias  
+            # b is 1 x hidden_size
+            self.biases.append(np.zeros((1, output_size)))
+            
 
-        self.learning_rate = learning_rate
 
-    # TRANSFORMATIONS
+    #----------------- TRANSFORMATIONS-----------------------
 
     def ReLU(self, x):
         
@@ -53,46 +65,110 @@ class NeuralNetwork:
         return 1 / (1 + np.exp(-x))
     
     def sigmoid_derivative(self, x):
-        i = self.sigmoid(x)
+        x = self.sigmoid(x)
         
-        return i * (1 - i)
+        return x * (1 - x)
     
+    def tanh(self, x):
+
+        return np.tanh(x)
+    
+    def tanh_derivative(self, x):
+        x = self.tanh(x)
+
+        return 1-x**2
+    
+
+
+    def activation(self, z, func):
+
+        if func == "relu":
+            return self.ReLU(z)
+        elif func == "sigmoid":
+            return self.sigmoid(z)
+        elif func == "tanh":
+            return self.tanh(z)
+        else:
+            raise ValueError(f"Unsupported activation: {func}")
+    
+    def activation_derivative(self, z, func):
+
+        if func == "relu":
+            return self.ReLU_derivative(z)
+        elif func == "sigmoid":
+            return self.sigmoid_derivative(z)
+        elif func == "tanh":
+            return self.tanh_derivative(z)
+        else:
+            raise ValueError(f"Unsupported activation: {func}")
+
+    #------------------------------------------------------------------
+
     # FORWARD PROPOGATION 
     def forward(self, X):
+
+        # first A is inputs
+        A = X
+
+        self.cache = []
         # map input to hidden
-        self.Z1 = X @ self.W1 + self.b1
-        self.A1 = self.ReLU(self.Z1)
 
-        # map hidden to output
-        self.Z2 = self.A1 @ self.W2 + self.b2
-        self.A2 = self.sigmoid(self.Z2)
+        for i in range(len(self.layer_dimensions)-1):
+            W = self.weights[i]
+            b = self.biases[i]
+            activation_function = self.activations[i]
 
-        return self.A2
+            A_prev = A
+
+            Z = A_prev @ W + b
+            A = self.activation(z = Z, func = activation_function)
+
+            # update cache
+            self.cache.append({"A_prev" : A_prev, 
+                               "W" : W, 
+                               "b" : b, 
+                               "Z": Z, 
+                               "A": A,
+                               "activation_function": activation_function})
+            
+        return A
 
     # BACKWARD PROPOGATION
     def backward(self, X, y_true):
 
-        m = X.shape[0] # numper of inputs
+        m = y_true.shape[0] 
+        gradient_W = [None] * (len(self.layer_dimensions) - 1)
+        gradient_b = [None] * (len(self.layer_dimensions) - 1)
 
-        # - output to hidden -
-        # Gradient loss w.t.r output Z2
-        dZ2 = (self.A2 - y_true)/ m 
+        A_out = self.forward(X)
 
-        # Gradient loss w.t.r W2 and b2
-        dW2 = self.A1.T @ dZ2
-        db2 = np.sum(dZ2, axis = 0 , keepdims = True)
+        # output to hideen
+        dZ = (A_out - y_true) / m
 
-        # Gradient loss w.t.r hidden layer A1
-        dA1 = dZ2 @ self.W2.T
+        for i in reversed(range(len(self.weights))):
+            cache = self.cache[i]
+            A_prev = cache["A_prev"]
+            W = cache["W"]
+            b = cache["b"]
+            Z = cache["Z"]
+            A = cache["A"]
+            activation_function = cache["activation_function"]
 
-        # - hidden to input -
-        # Gradient loss w.t.r hidden layer Z1
-        dZ1 = dA1 * self.ReLU_derivative(self.Z1)
+            # hidden to hidden to hidden to ..... to input
+            dZi = dZ * self.activation_derivative(Z, cache["activation_function"])
+            dWi = A_prev.T @ dZi
+            dbi = np.sum(dZi, axis = 0, keepdims = True)
 
-        dW1 = X.T @ dZ1
-        db1 = np.sum(dZ1, axis = 0, keepdims = True)
+            gradient_W[i] = dWi
+            gradient_b[i] = dbi
 
-        return dW2, db2, dW1, db1  
+            # if in hiddne layer, update dZ for next iteration 
+            if i > 0:
+                dA_prev = dZi @ W.T
+                dZ = dA_prev * self.activation_derivative(self.cache[i-1]["Z"], self.cache[i-1]["activation_function"])
+
+
+        return gradient_W, gradient_b 
 
     # LOSS FINCTION
     def compute_loss(self, y_true, y_predicted):
@@ -105,26 +181,34 @@ class NeuralNetwork:
     def gradient_check(self, X, y_true, epsilon = 1e-5):
 
         self.forward(X)
-        dW2, db2, dW1, db1 = self.backward(X, y_true)
+        gradient_W, gradient_b = self.backward(X, y_true)
 
         # Check wegith W1
-        original_value = self.W1[0, 0]
+        original_value = self.weights[0][0, 0]
 
-        self.W1[0, 0] = original_value + epsilon
+        self.weights[0][0, 0] = original_value + epsilon
         positive_loss = self.compute_loss(y_true, self.forward(X))
 
-        self.W1[0,0] = original_value - epsilon
+        self.weights[0][0,0] = original_value - epsilon
         negative_loss = self.compute_loss(y_true, self.forward(X))
 
-        self.W1[0, 0] = original_value
+        self.weights[0][0, 0] = original_value
 
         numerical_gradient = (positive_loss - negative_loss) / (2* epsilon)
-        backdrop_gradient = dW1[0, 0]
+        backdrop_gradient = gradient_W[0][0, 0] # type: ignore
         difference = (numerical_gradient - backdrop_gradient)
 
         return abs(difference)
 
     # Training loop
+    def update_parameters(self, gradient_W, gradient_b):
+
+        for i in range(len(self.weights)): 
+            self.weights[i] = self.weights[i] - self.learning_rate * gradient_W[i]
+            self.biases[i] = self.biases[i] - self.learning_rate * gradient_b[i]
+
+        return self.weights, self.biases
+
     def train(self, X, y_true, epochs = 10000, track_value = 1000):
         # forward -> calc. loss -> backward -> update -> forward -> ......
 
@@ -134,24 +218,17 @@ class NeuralNetwork:
             
             y_predicted = self.forward(X)
 
-            loss = self.compute_loss(y_true, self.A2)
+            loss = self.compute_loss(y_true, y_predicted)
 
-            dW2, db2, dW1, db1 = self.backward(X, y_true)
+            gradient_W, gradient_b = self.backward(X, y_true)
 
-            self.W2 = self.W2 - self.learning_rate * dW2
-            self.b2 = self.b2 - self.learning_rate * db2
-            self.W1 = self.W1 - self.learning_rate * dW1
-            self.b1 = self.b1 - self.learning_rate * db1
+            self.update_parameters(gradient_W, gradient_b)
 
-
-            
             # track loss
             if epoch % track_value == 0:
                 print(f"Epoch: {epoch}, Loss: {loss}")
                 self.loss_values.append(loss)
 
-
-    
     def predict_prob(self, X):
 
         prob = self.forward(X)

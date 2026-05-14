@@ -31,11 +31,11 @@ y = np.array(
             ]
         )
 
-# 
+layer_dims = [3, 8, 8, 1]
 
-nn = NeuralNetwork(input_size = 3, hidden_size = 8, output_size = 1, learning_rate = 0.1, seed = 30)
+activations = ["relu", "sigmoid", "sigmoid"]
 
-nn.forward(X)
+nn = NeuralNetwork(layer_dims = layer_dims, activations = activations, learning_rate = 0.5, seed = 30)
 
 nn.train(X, y, epochs = 10000)
 
@@ -55,7 +55,7 @@ plt.plot(
         nn.loss_values, 
         color = "red"
         )
-plt.xlabel("Epoch (per 1000)")
+plt.xlabel("Epoch (per 10000)")
 plt.ylabel("Loss")
 plt.title("Training Loss")
 plt.show()
