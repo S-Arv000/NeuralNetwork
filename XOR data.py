@@ -31,9 +31,9 @@ y = np.array(
             ]
         )
 
-layer_dims = [3, 8, 8, 1]
+layer_dims = [3, 8, 8, 4, 1]
 
-activations = ["relu", "sigmoid", "sigmoid"]
+activations = ["relu", "sigmoid", "tanh", "sigmoid"]
 
 nn = NeuralNetwork(layer_dims = layer_dims, activations = activations, learning_rate = 0.5, seed = 30)
 

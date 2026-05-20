@@ -9,8 +9,8 @@ class NeuralNetwork:
         Layer_dims = [input_size, Hidden_size1, hidden_size2,...., output_size]
 
         activations = [hidden1_activation, hiddne2_activation....]
-        example: activations = ["relu", "sigmoid", "tanh"]
-                    ^ no other activations yet
+        example: activations = ["relu", "tanh", "sigmoid"]
+                ^ no other activations yet
         
         len(activations) = len(layer_dims) - 1 
 
@@ -77,9 +77,9 @@ class NeuralNetwork:
         x = self.tanh(x)
 
         return 1-x**2
-    
 
 
+     # can certainly improve, works fo rnow
     def activation(self, z, func):
 
         if func == "relu":
@@ -113,6 +113,8 @@ class NeuralNetwork:
         self.cache = []
         # map input to hidden
 
+
+        # for each layer, find Z = A_prev @ W + b
         for i in range(len(self.layer_dimensions)-1):
             W = self.weights[i]
             b = self.biases[i]
@@ -121,9 +123,10 @@ class NeuralNetwork:
             A_prev = A
 
             Z = A_prev @ W + b
-            A = self.activation(z = Z, func = activation_function)
 
-            # update cache
+            #apply activation and update and store value
+            A = self.activation(z = Z, func = activation_function)
+           
             self.cache.append({"A_prev" : A_prev, 
                                "W" : W, 
                                "b" : b, 
@@ -136,6 +139,7 @@ class NeuralNetwork:
     # BACKWARD PROPOGATION
     def backward(self, X, y_true):
 
+        # intialize gradients per layer to be updated
         m = y_true.shape[0] 
         gradient_W = [None] * (len(self.layer_dimensions) - 1)
         gradient_b = [None] * (len(self.layer_dimensions) - 1)
@@ -145,6 +149,7 @@ class NeuralNetwork:
         # output to hideen
         dZ = (A_out - y_true) / m
 
+        # store previous values, then update dZ, gradents, and bias for next layer
         for i in reversed(range(len(self.weights))):
             cache = self.cache[i]
             A_prev = cache["A_prev"]
@@ -154,7 +159,7 @@ class NeuralNetwork:
             A = cache["A"]
             activation_function = cache["activation_function"]
 
-            # hidden to hidden to hidden to ..... to input
+
             dZi = dZ * self.activation_derivative(Z, cache["activation_function"])
             dWi = A_prev.T @ dZi
             dbi = np.sum(dZi, axis = 0, keepdims = True)
@@ -162,7 +167,7 @@ class NeuralNetwork:
             gradient_W[i] = dWi
             gradient_b[i] = dbi
 
-            # if in hiddne layer, update dZ for next iteration 
+            # edge case if in input, no previous layer
             if i > 0:
                 dA_prev = dZi @ W.T
                 dZ = dA_prev * self.activation_derivative(self.cache[i-1]["Z"], self.cache[i-1]["activation_function"])
@@ -170,14 +175,14 @@ class NeuralNetwork:
 
         return gradient_W, gradient_b 
 
-    # LOSS FINCTION
+    # LOSS FUNCTION
     def compute_loss(self, y_true, y_predicted):
         
         Loss = -np.mean((y_true * np.log(y_predicted)) + (1 - y_true) * np.log(1 - y_predicted))
         
         return Loss
 
-    # Gradient check
+
     def gradient_check(self, X, y_true, epsilon = 1e-5):
 
         self.forward(X)
