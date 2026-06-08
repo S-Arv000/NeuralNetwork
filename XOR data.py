@@ -31,6 +31,7 @@ y = np.array(
             ]
         )
 
+# len(layer_dims) = len(activations) + 1
 layer_dims = [3, 8, 8, 4, 1]
 
 activations = ["relu", "sigmoid", "tanh", "sigmoid"]

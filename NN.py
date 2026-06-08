@@ -50,7 +50,7 @@ class NeuralNetwork:
             
 
 
-    #----------------- TRANSFORMATIONS-----------------------
+    #----------------- ACITVATIONS-----------------------
 
     def ReLU(self, x):
         
@@ -124,7 +124,7 @@ class NeuralNetwork:
 
             Z = A_prev @ W + b
 
-            #apply activation and update and store value
+            # apply activation and update and store value
             A = self.activation(z = Z, func = activation_function)
            
             self.cache.append({"A_prev" : A_prev, 
@@ -160,7 +160,7 @@ class NeuralNetwork:
             activation_function = cache["activation_function"]
 
 
-            dZi = dZ * self.activation_derivative(Z, cache["activation_function"])
+            dZi = dZ * self.activation_derivative(Z, activation_function)
             dWi = A_prev.T @ dZi
             dbi = np.sum(dZi, axis = 0, keepdims = True)
 
